@@ -1,115 +1,258 @@
--- ==================================================
--- Healthcare EHR Data Analysis
+-- =========================================================
+-- Healthcare EHR Data Analysis (Advanced SQL Project)
 -- Author: Varsha Ponnaganti
--- ==================================================
+-- Description: Advanced SQL analysis on healthcare EHR data
+-- =========================================================
 
--- Table: Patients
-CREATE TABLE patients (
-    subject_id INT,
-    gender VARCHAR(5),
-    anchor_age INT,
-    anchor_year INT,
-    anchor_year_group VARCHAR(20),
-    dod DATE
-);
 
--- Table: Admissions
-CREATE TABLE admissions (
-    subject_id INT,
-    hadm_id BIGINT,
-    admittime TIMESTAMP,
-    dischtime TIMESTAMP,
-    deathtime TIMESTAMP,
-    admission_type VARCHAR(50),
-    admission_location VARCHAR(100),
-    discharge_location VARCHAR(100),
-    insurance VARCHAR(50),
-    language VARCHAR(20),
-    marital_status VARCHAR(20),
-    race VARCHAR(100),
-    hospital_expire_flag INT
-);
+-- =============================
+-- 1. DATA VALIDATION
+-- =============================
 
--- Table: Diagnoses
-CREATE TABLE diagnoses (
-    subject_id INT,
-    hadm_id BIGINT,
-    seq_num INT,
-    icd_code VARCHAR(10),
-    icd_version INT
-);
+SELECT COUNT(*) AS total_patients FROM patients;
+SELECT COUNT(*) AS total_admissions FROM admissions;
+SELECT COUNT(*) AS total_diagnoses FROM diagnoses;
 
--- =============================================
--- DATA EXPLORATION
--- =============================================
 
-SELECT COUNT(*) FROM patients;
-SELECT COUNT(*) FROM admissions;
-SELECT COUNT(*) FROM diagnoses;
+-- =============================
+-- 2. DEMOGRAPHIC ANALYSIS
+-- =============================
 
--- Gender distribution
-SELECT gender, COUNT(*) AS patient_count
+SELECT 
+gender,
+COUNT(*) AS patient_count,
+ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 2) AS percentage
 FROM patients
 GROUP BY gender;
 
--- =============================================
--- DISEASE ANALYSIS
--- =============================================
 
-SELECT icd_code, COUNT(*) AS cases
-FROM diagnoses
-GROUP BY icd_code
-ORDER BY cases DESC
-LIMIT 10;
-
--- =============================================
--- MORTALITY ANALYSIS
--- =============================================
+-- =============================
+-- 3. OVERALL MORTALITY
+-- =============================
 
 SELECT 
 COUNT(*) AS total_admissions,
 SUM(hospital_expire_flag) AS deaths,
-AVG(hospital_expire_flag) AS mortality_rate
+ROUND(AVG(hospital_expire_flag), 4) AS mortality_rate
 FROM admissions;
 
--- Mortality by age
-SELECT 
-p.anchor_age,
-AVG(a.hospital_expire_flag) AS mortality_rate
-FROM admissions a
-JOIN patients p
-ON a.subject_id = p.subject_id
-GROUP BY p.anchor_age
-ORDER BY p.anchor_age;
 
--- Mortality by age groups
+-- =============================
+-- 4. AGE-BASED MORTALITY (CTE)
+-- =============================
+
+WITH age_data AS (
+    SELECT 
+    p.anchor_age,
+    a.hospital_expire_flag
+    FROM patients p
+    JOIN admissions a
+    ON p.subject_id = a.subject_id
+)
+
 SELECT 
-CASE 
-WHEN p.anchor_age < 30 THEN 'Under 30'
-WHEN p.anchor_age BETWEEN 30 AND 50 THEN '30-50'
-WHEN p.anchor_age BETWEEN 50 AND 70 THEN '50-70'
-ELSE '70+'
-END AS age_group,
+anchor_age,
+COUNT(*) AS total_patients,
+ROUND(AVG(hospital_expire_flag), 4) AS mortality_rate
+FROM age_data
+GROUP BY anchor_age
+ORDER BY anchor_age;
+
+
+-- =============================
+-- 5. AGE GROUP SEGMENTATION
+-- =============================
+
+WITH age_groups AS (
+    SELECT 
+    CASE 
+        WHEN p.anchor_age < 30 THEN 'Under 30'
+        WHEN p.anchor_age BETWEEN 30 AND 50 THEN '30-50'
+        WHEN p.anchor_age BETWEEN 50 AND 70 THEN '50-70'
+        ELSE '70+'
+    END AS age_group,
+    a.hospital_expire_flag
+    FROM patients p
+    JOIN admissions a
+    ON p.subject_id = a.subject_id
+)
+
+SELECT 
+age_group,
 COUNT(*) AS patients,
-AVG(a.hospital_expire_flag) AS mortality_rate
-FROM admissions a
-JOIN patients p
-ON a.subject_id = p.subject_id
+ROUND(AVG(hospital_expire_flag), 4) AS mortality_rate
+FROM age_groups
 GROUP BY age_group
-ORDER BY age_group;
+ORDER BY mortality_rate DESC;
 
--- =============================================
--- HIGH RISK DISEASES
--- =============================================
+
+-- =============================
+-- 6. TOP DISEASES (WINDOW FUNCTION)
+-- =============================
+
+SELECT *
+FROM (
+    SELECT 
+    icd_code,
+    COUNT(*) AS cases,
+    RANK() OVER (ORDER BY COUNT(*) DESC) AS rank
+    FROM diagnoses
+    GROUP BY icd_code
+) ranked
+WHERE rank <= 10;
+
+
+-- =============================
+-- 7. HIGH RISK DISEASES
+-- =============================
+
+WITH disease_stats AS (
+    SELECT 
+    d.icd_code,
+    COUNT(*) AS cases,
+    AVG(a.hospital_expire_flag) AS mortality_rate
+    FROM diagnoses d
+    JOIN admissions a
+    ON d.hadm_id = a.hadm_id
+    GROUP BY d.icd_code
+)
+
+SELECT *
+FROM disease_stats
+WHERE cases > 5
+ORDER BY mortality_rate DESC
+LIMIT 10;
+
+
+-- =============================
+-- 8. MORTALITY RANKING BY DISEASE
+-- =============================
 
 SELECT 
-d.icd_code,
+icd_code,
+cases,
+mortality_rate,
+RANK() OVER (ORDER BY mortality_rate DESC) AS risk_rank
+FROM (
+    SELECT 
+    d.icd_code,
+    COUNT(*) AS cases,
+    AVG(a.hospital_expire_flag) AS mortality_rate
+    FROM diagnoses d
+    JOIN admissions a
+    ON d.hadm_id = a.hadm_id
+    GROUP BY d.icd_code
+) t
+WHERE cases > 5;
+
+
+-- =============================
+-- 9. PATIENT-LEVEL ANALYSIS
+-- =============================
+
+SELECT 
+subject_id,
+COUNT(*) AS total_admissions,
+SUM(hospital_expire_flag) AS death_flag
+FROM admissions
+GROUP BY subject_id
+ORDER BY total_admissions DESC;
+
+
+-- =============================
+-- 10. LENGTH OF STAY ANALYSIS
+-- =============================
+
+-- For PostgreSQL
+SELECT 
+subject_id,
+AVG(EXTRACT(EPOCH FROM (dischtime - admittime)) / 3600) AS avg_length_of_stay_hours
+FROM admissions
+GROUP BY subject_id
+ORDER BY avg_length_of_stay_hours DESC;
+
+
+-- =============================
+-- 11. RUNNING MORTALITY TREND
+-- =============================
+
+SELECT 
+anchor_age,
+AVG(mortality_rate) OVER (ORDER BY anchor_age) AS cumulative_mortality
+FROM (
+    SELECT 
+    p.anchor_age,
+    AVG(a.hospital_expire_flag) AS mortality_rate
+    FROM patients p
+    JOIN admissions a
+    ON p.subject_id = a.subject_id
+    GROUP BY p.anchor_age
+) t;
+
+
+-- =============================
+-- 12. ADMISSION TREND (TIME SERIES)
+-- =============================
+
+SELECT 
+EXTRACT(YEAR FROM admittime) AS year,
+COUNT(*) AS total_admissions,
+AVG(hospital_expire_flag) AS mortality_rate
+FROM admissions
+GROUP BY year
+ORDER BY year;
+
+
+-- =============================
+-- 13. READMISSION ANALYSIS (ADVANCED)
+-- =============================
+
+WITH patient_admissions AS (
+    SELECT 
+    subject_id,
+    admittime,
+    LAG(admittime) OVER (PARTITION BY subject_id ORDER BY admittime) AS previous_admission
+    FROM admissions
+)
+
+SELECT 
+COUNT(*) AS total_records,
+COUNT(CASE 
+    WHEN previous_admission IS NOT NULL 
+    AND admittime - previous_admission <= INTERVAL '30 days' 
+    THEN 1 END) AS readmissions_30_days
+FROM patient_admissions;
+
+
+-- =============================
+-- 14. HIGH-RISK PATIENTS (RANKING)
+-- =============================
+
+SELECT 
+subject_id,
+total_admissions,
+death_flag,
+RANK() OVER (ORDER BY death_flag DESC, total_admissions DESC) AS risk_rank
+FROM (
+    SELECT 
+    subject_id,
+    COUNT(*) AS total_admissions,
+    SUM(hospital_expire_flag) AS death_flag
+    FROM admissions
+    GROUP BY subject_id
+) t
+LIMIT 20;
+
+
+-- =============================
+-- 15. DISEASE CONTRIBUTION (%)
+-- =============================
+
+SELECT 
+icd_code,
 COUNT(*) AS cases,
-AVG(a.hospital_expire_flag) AS mortality_rate
-FROM diagnoses d
-JOIN admissions a
-ON d.hadm_id = a.hadm_id
-GROUP BY d.icd_code
-HAVING COUNT(*) > 5
-ORDER BY mortality_rate DESC
+ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER(), 2) AS contribution_percentage
+FROM diagnoses
+GROUP BY icd_code
+ORDER BY contribution_percentage DESC
 LIMIT 10;
