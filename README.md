@@ -94,14 +94,12 @@ The Excel dashboard provides an interactive interface for exploring key insights
 
 ehr-sql-analysis/
 │
-├── data/              Raw datasets (CSV files)
-├── sql/               SQL queries for analysis
-├── excel/             Excel dashboard
-├── images/            Dashboard screenshots
+├── data/ Raw datasets (CSV files)
+├── sql/ SQL queries for analysis
+├── excel/ Excel dashboard
+├── images/ Dashboard screenshots
 ├── README.md
 └── .gitignore
-
----
 
 ## How to Run
 
