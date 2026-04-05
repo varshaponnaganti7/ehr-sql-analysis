@@ -22,7 +22,11 @@ The dataset consists of three core tables:
 * admissions.csv
 * diagnoses_icd.csv
 
-These datasets were used to perform relational analysis and derive patient-level and disease-level insights.
+---
+
+## Dashboard Preview
+
+![Dashboard](images/dashboard.png)
 
 ---
 
@@ -34,21 +38,21 @@ The SQL analysis includes:
 * Demographic analysis by gender
 * Mortality rate calculations
 * Age-based segmentation using CASE statements
-* Common Table Expressions (CTEs) for structured queries
+* Common Table Expressions (CTEs)
 * Window functions such as RANK and LAG
 * Top 10 most frequent diseases
-* High-risk disease identification based on mortality rate
-* Patient-level admission and mortality analysis
+* High-risk disease identification
+* Patient-level analysis
 * Length of stay calculation
-* Time-series analysis of admissions
-* Readmission analysis within 30 days
-* Disease contribution percentage analysis
+* Time-series analysis
+* Readmission analysis (30 days)
+* Disease contribution percentage
 
 ---
 
 ## Excel Dashboard
 
-The Excel dashboard provides an interactive interface for exploring key insights:
+The Excel dashboard includes:
 
 * KPI Metrics:
 
@@ -63,67 +67,71 @@ The Excel dashboard provides an interactive interface for exploring key insights
 
 * Features:
 
-  * Pivot Tables for aggregation
-  * Slicers for gender-based filtering
-  * XLOOKUP for data integration
-  * Structured tables for clean data handling
+  * Pivot Tables
+  * Slicers (Gender filter)
+  * XLOOKUP
+  * Structured Tables
 
 ---
 
 ## Business Questions Answered
 
-* What is the overall mortality rate across patients?
+* What is the overall mortality rate?
 * How does mortality vary by age group?
 * Which diseases are most common?
-* Which diseases have higher associated mortality risk?
-* How do readmissions impact patient outcomes?
+* Which diseases have higher mortality risk?
+* How do readmissions impact outcomes?
 
 ---
 
 ## Key Insights
 
-* Patients aged 70 and above show the highest mortality rate
-* Patients aged 50 to 70 also demonstrate elevated risk
-* A small number of diseases contribute significantly to total cases
-* Certain diseases are associated with higher mortality rates
-* Readmission within 30 days is a measurable factor in patient outcomes
+* Patients aged 70+ show the highest mortality rate
+* Patients aged 50–70 also have elevated risk
+* A small number of diseases contribute significantly to cases
+* Certain diseases are associated with higher mortality
+* Readmissions within 30 days impact outcomes
 
 ---
 
 ## Project Structure
 
+```
 ehr-sql-analysis/
 │
-├── data/ Raw datasets (CSV files)
-├── sql/ SQL queries for analysis
-├── excel/ Excel dashboard
-├── images/ Dashboard screenshots
+├── data/              Raw datasets (CSV files)
+├── sql/               SQL queries for analysis
+├── excel/             Excel dashboard
+├── images/            Dashboard screenshots
 ├── README.md
 └── .gitignore
+```
+
+---
 
 ## How to Run
 
 ### SQL Analysis
 
-1. Load the CSV files into a SQL environment (PostgreSQL or similar)
-2. Execute queries from:
+1. Load CSV files into a SQL environment
+2. Run queries from:
    sql/analysis.sql
 
 ### Excel Dashboard
 
 1. Open:
    excel/dashboard.xlsx
-2. Use slicers to interact with the dashboard
+2. Use slicers to explore the dashboard
 
 ---
 
 ## Skills Demonstrated
 
-* Advanced SQL querying and optimization
+* Advanced SQL querying
 * Data transformation and aggregation
-* Analytical thinking and problem solving
-* Dashboard development in Excel
-* Business insight generation from raw data
+* Excel dashboard development
+* Data visualization
+* Business insight generation
 
 ---
 
